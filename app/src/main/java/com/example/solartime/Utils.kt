@@ -3,6 +3,9 @@ package com.example.solartime
 import android.location.Location
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class Utils {
     fun localSolarTime(longitude : Location){
@@ -18,12 +21,8 @@ class Utils {
 
     }
 
-    fun timeEquation() {
-        1+1
-    }
-
     companion object{ // like static in java
-        fun correctLongitudeToLocalStandardTime(longitude: Double): Double {
+        fun correctLongitudeToLocalStandardTime(longitude: Double): Int {
 
             val timeZone: String = SimpleDateFormat("Z", Locale.getDefault()).format(System.currentTimeMillis()) // +0130
             val hours = timeZone.substring(0,3).toInt() // +01
@@ -35,20 +34,31 @@ class Utils {
             val result:Double = (longitude - localStandardTimeMeridian) * 4
             val partsResult = result.toString().split(".")
             val resultMinutes = partsResult[0].toInt()
-            val resultSeconds = (((("0."+ partsResult[1]).toDouble()) * 60))
+            val resultSeconds = (((("0."+ partsResult[1]).toDouble()) * 60)).roundToInt()
 
+            // return time in milliseconds
             return if (result > 0)
                 (resultMinutes * 60 *1000) + (resultSeconds * 1000)
             else
                 (resultMinutes * 60 *1000) - (resultSeconds * 1000)
+        }
 
-            /*
-            val parts = longitude.toString().split(".")
-            val right = parts[1]
-            val cutResult = "0.$right"
+        fun equationOfTime(dayOfYear: Double): Int {
 
-             */
-          //  return //cutResult.toDouble()
+            val b = 360 * (dayOfYear - 81) / 365
+
+            val result = (9.87 * sin(Math.toRadians(2*b))) - (7.53 * cos(Math.toRadians(b))) - (1.5 * sin(Math.toRadians(b)))
+
+            val partsResult = result.toString().split(".")
+
+            val resultMinutes = partsResult[0].toInt()
+            val resultSeconds = (((("0."+ partsResult[1]).toDouble()) * 60)).roundToInt()
+
+            // return time in milliseconds
+            return if (result > 0)
+                (resultMinutes * 60 *1000) + (resultSeconds * 1000)
+            else
+                (resultMinutes * 60 *1000) - (resultSeconds * 1000)
         }
 
     }

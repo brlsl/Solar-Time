@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity(){
             else{
                 startLocationUpdates()
                 Snackbar.make(mConstraintLayout,"Refresh position", Snackbar.LENGTH_SHORT).show()
-                var longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f)
+                val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f)
                 if (longitude != 0.0f)
                     configureSolarTime(mLegalTimeTxtView, mSolarTimeTxtView, longitude.toDouble() )
             }
@@ -88,12 +88,14 @@ class MainActivity : AppCompatActivity(){
             override fun onLocationResult(locationResult: LocationResult?) {
                 locationResult ?: return
                 for (location in locationResult.locations){
-                    mPositionTxtView.text = "Last Known Position: ${Utils.round(location.longitude,8)}"
+
                     mSharedPreferences
                         .edit()
                         .putFloat(PREFS_LONGITUDE, location.longitude.toFloat())
                         .apply()
 
+                    mPositionTxtView.text = "Last known device longitude: ${Utils.round(location.longitude,8)}"
+                    configureSolarTime(mLegalTimeTxtView, mSolarTimeTxtView, location.longitude)
                 }
             }
         }
@@ -131,7 +133,7 @@ class MainActivity : AppCompatActivity(){
                     // Got last known location. In some rare situations this can be null.
                     if (location != null){
                         var longitude = location.longitude
-                        mPositionTxtView.text = "Last Known device longitude: ${Utils.round(longitude,8)}"
+                        mPositionTxtView.text = "Last known device longitude: ${Utils.round(longitude,8)}"
                         configureSolarTime(legalTimeTxtView, solarTimeTxtView, longitude)
 
                         // register last known longitude
@@ -201,7 +203,6 @@ class MainActivity : AppCompatActivity(){
     }
 
     private fun startLocationUpdates() {
-
         buildLocationRequest()
         if (ActivityCompat.checkSelfPermission(
                 this,
@@ -216,7 +217,6 @@ class MainActivity : AppCompatActivity(){
         mFusedLocationClient.requestLocationUpdates(locationRequest,
             locationCallback,
             Looper.getMainLooper())
-        Snackbar.make(mConstraintLayout, "Position updated!", Snackbar.LENGTH_LONG).show()
     }
 
 }

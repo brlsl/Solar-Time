@@ -1,6 +1,8 @@
 package com.example.solartime
 
 import android.location.Location
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.cos
@@ -59,6 +61,14 @@ class Utils {
                 (resultMinutes * 60 *1000) + (resultSeconds * 1000)
             else
                 (resultMinutes * 60 *1000) - (resultSeconds * 1000)
+        }
+
+
+        fun round(value: Double, places: Int): Double {
+            require(places >= 0)
+            var bd: BigDecimal = BigDecimal.valueOf(value)
+            bd = bd.setScale(places, RoundingMode.HALF_UP)
+            return bd.toDouble()
         }
 
     }

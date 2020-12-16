@@ -10,54 +10,53 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
+import com.airbnb.lottie.LottieAnimationView
 import com.google.android.gms.location.*
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import pub.devrel.easypermissions.EasyPermissions
-import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity(){
 
+    // FOR UI
+    private lateinit var mLegalTimeTxtView: TextView
+    private lateinit var mSolarTimeTxtView: TextView
+    private lateinit var mPositionTxtView: TextView
+    private lateinit var mLocalisationButton: Button
+    private lateinit var mapLocationAnim: LottieAnimationView
+
+    // FOR DATA
+    private val TAG = "Main Activity"
+    private companion object val PREFERENCES = "PREFERENCES"
+    private val PREFS_LONGITUDE = "PREFERENCES_LONGITUDE"
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var mConstraintLayout: ConstraintLayout
     private lateinit var mSharedPreferences: SharedPreferences
-
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
-    private lateinit var mLegalTimeTxtView : TextView
-    private lateinit var mSolarTimeTxtView : TextView
-    private lateinit var mPositionTxtView: TextView
 
-    private lateinit var mLocalisationButton : Button
-
-    private companion object val PREFERENCES = "PREFERENCES"
-    private val PREFS_LONGITUDE = "PREFERENCES_LONGITUDE"
-
+    // LIFE CYCLE
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mLegalTimeTxtView = findViewById(R.id.hourTextView)
-        mSolarTimeTxtView = findViewById(R.id.solarTimeHourTextView)
-        mPositionTxtView = findViewById(R.id.longitudeTextView)
-
-        mLocalisationButton = findViewById(R.id.button_localisation)
-
+        configureViews()
+        configureCallBackLocation()
         configureLegalTime(mLegalTimeTxtView)
-
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        mConstraintLayout = findViewById(R.id.mainActivityConstraintLayout)
-
-        mSharedPreferences = baseContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-
-        askGPSPosition(mLegalTimeTxtView, mSolarTimeTxtView)
+        askGPSPermission(mLegalTimeTxtView, mSolarTimeTxtView)
 
         mLocalisationButton.setOnClickListener {
             val lm: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -74,28 +73,22 @@ class MainActivity : AppCompatActivity(){
 
             else{
                 startLocationUpdates()
-                Snackbar.make(mConstraintLayout,"Refresh position", Snackbar.LENGTH_SHORT).show()
-                val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f)
-                if (longitude != 0.0f)
-                    configureSolarTime(mLegalTimeTxtView, mSolarTimeTxtView, longitude.toDouble() )
-            }
+                Snackbar.make(mConstraintLayout,"Refreshing position", Snackbar.LENGTH_LONG).show()
+                mLocalisationButton.visibility = View.GONE
+                mapLocationAnim.visibility = View.VISIBLE
+                mapLocationAnim.playAnimation()
+                mSolarTimeTxtView.visibility = View.GONE
 
+                GlobalScope.launch(Dispatchers.Main) {
+                    delay(3000)
+                    stopLocationUpdates()
+                    mapLocationAnim.visibility = View.GONE
 
-        }
-
-        // for location update
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult?) {
-                locationResult ?: return
-                for (location in locationResult.locations){
-
-                    mSharedPreferences
-                        .edit()
-                        .putFloat(PREFS_LONGITUDE, location.longitude.toFloat())
-                        .apply()
-
-                    mPositionTxtView.text = "Last known device longitude: ${Utils.round(location.longitude,8)}"
-                    configureSolarTime(mLegalTimeTxtView, mSolarTimeTxtView, location.longitude)
+                    mLocalisationButton.visibility = View.VISIBLE
+                    mSolarTimeTxtView.visibility = View.VISIBLE
+                    val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999f)
+                    if (longitude != 999f)
+                        configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
                 }
             }
         }
@@ -103,16 +96,32 @@ class MainActivity : AppCompatActivity(){
 
 
         if (mSharedPreferences.contains(PREFS_LONGITUDE)){
-            var longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f).toDouble()
-
-            mPositionTxtView.text = "Last known device longitude:" + Utils.round(longitude, 6)
-            configureSolarTime(mLegalTimeTxtView, mSolarTimeTxtView, longitude)
+            val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999.0f)
+            if (longitude != 999f){
+                mPositionTxtView.text = "Last known device longitude:" + Utils.round(longitude.toDouble(), 8)
+                configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
+            }
 
         } else {
-            mPositionTxtView.text = "Unknown location, please reconnect"
+            mPositionTxtView.text = "Unknown location, please locate your device"
         }
 
     }
+
+    override fun onResume() {
+        super.onResume()
+        val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999.0f)
+
+        if (longitude != 999f){
+            mPositionTxtView.text = "Last known device longitude:" + Utils.round(longitude.toDouble(), 8)
+            configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
+        }
+        else {
+            mPositionTxtView.text = "Unknown location, please locate your device"
+        }
+    }
+
+
 
     // ask permissions
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray
@@ -122,11 +131,8 @@ class MainActivity : AppCompatActivity(){
     }
 
     @SuppressLint("MissingPermission")
-    fun askGPSPosition(
-        legalTimeTxtView: TextView,
-        solarTimeTxtView: TextView
-    ) {
-        var perms : Array<String> = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
+    fun askGPSPermission(legalTimeTxtView: TextView, solarTimeTxtView: TextView){
+        val perms : Array<String> = arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)
         if(EasyPermissions.hasPermissions(this, *perms)){
             mFusedLocationClient.lastLocation
                 .addOnSuccessListener { location : Location? ->
@@ -134,7 +140,7 @@ class MainActivity : AppCompatActivity(){
                     if (location != null){
                         var longitude = location.longitude
                         mPositionTxtView.text = "Last known device longitude: ${Utils.round(longitude,8)}"
-                        configureSolarTime(legalTimeTxtView, solarTimeTxtView, longitude)
+                        configureSolarTime(solarTimeTxtView, longitude)
 
                         // register last known longitude
                         mSharedPreferences
@@ -148,59 +154,84 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    private fun configureSolarTime(legalTimeTextView: TextView, solarTimeTextView: TextView, longitude:Double){
-        val currentLegalTime = Date()
-        val formatter = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
+    // CONFIGURATION METHODS
 
+    private fun configureCallBackLocation(){
+        // for location update
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult ?: return
+                for (location in locationResult.locations){
+
+                    // register
+                    mSharedPreferences
+                        .edit()
+                        .putFloat(PREFS_LONGITUDE, location.longitude.toFloat())
+                        .apply()
+
+                    mPositionTxtView.text = "Last known device longitude: ${Utils.round(location.longitude,8)}"
+                    configureSolarTime(mSolarTimeTxtView, location.longitude)
+                }
+            }
+        }
+
+    }
+
+    private fun configureSolarTime(solarTimeTextView: TextView, longitude:Double){
+        val formatter = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
         val calendar = Calendar.getInstance() // find today date and hour
-        val dayOfYear  = calendar.get(Calendar.DAY_OF_YEAR).toDouble() // get number of the year
+        val dayOfYear  = calendar.get(Calendar.DAY_OF_YEAR).toDouble() // get number day of the year
 
         val currentSolarTime = Date().time.plus(Utils.correctLongitudeToLocalStandardTime(longitude) + Utils.equationOfTime(dayOfYear))
 
-        val handler = Handler(Looper.myLooper()!!)
-        Thread(Runnable { run {
-            try{
-                Thread.sleep(10)
-            } catch (e: InterruptedException){
-                e.printStackTrace()
-            }
-            handler.post {
-                legalTimeTextView.text = formatter.format(currentLegalTime)
-                solarTimeTextView.text = formatter.format(currentSolarTime)
-                configureSolarTime(legalTimeTextView, solarTimeTextView, longitude)
-            }
+        solarTimeTextView.text = formatter.format(currentSolarTime)
 
-        } }).start()
+        val handler = Handler(Looper.myLooper()!!)
+        val job = GlobalScope.launch (Dispatchers.IO){
+            kotlin.run {
+                handler.post{
+                    configureSolarTime(solarTimeTextView, longitude)
+                }
+            }
+        }
+
+        if (longitude == mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f).toDouble()){
+            job.start()
+        }
+
+
+        else {
+            job.cancel()
+            Log.d(TAG, "Stop coroutine job")
+        }
+
     }
 
     private fun configureLegalTime(legalTimeTextView: TextView){
         val currentLegalTime = Date()
         val formatter = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
 
-
         val handler = Handler(Looper.myLooper()!!)
-        Thread(Runnable { run {
-            try{
-                Thread.sleep(10)
-            } catch (e: InterruptedException){
-                e.printStackTrace()
-            }
+        GlobalScope.launch(Dispatchers.IO) {
             handler.post {
                 legalTimeTextView.text = formatter.format(currentLegalTime)
                 configureLegalTime(legalTimeTextView)
             }
-
-        } }).start()
+        }.start()
     }
 
-
-
-    private fun buildLocationRequest(){
-        locationRequest = LocationRequest()
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-        locationRequest.setInterval(5000)
-
+    private fun configureViews(){
+        mSharedPreferences = baseContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mConstraintLayout = findViewById(R.id.mainActivityConstraintLayout)
+        mLegalTimeTxtView = findViewById(R.id.hourTextView)
+        mSolarTimeTxtView = findViewById(R.id.solarTimeHourTextView)
+        mPositionTxtView = findViewById(R.id.longitudeTextView)
+        mLocalisationButton = findViewById(R.id.button_localisation)
+        mapLocationAnim = findViewById(R.id.map_location_anim)
     }
+
+    // LOCATION METHODS
 
     private fun startLocationUpdates() {
         buildLocationRequest()
@@ -217,6 +248,17 @@ class MainActivity : AppCompatActivity(){
         mFusedLocationClient.requestLocationUpdates(locationRequest,
             locationCallback,
             Looper.getMainLooper())
+    }
+
+    private fun buildLocationRequest(){
+        locationRequest = LocationRequest()
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = 5000
+
+    }
+
+    private fun stopLocationUpdates() {
+        mFusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
 }

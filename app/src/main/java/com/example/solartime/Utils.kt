@@ -1,6 +1,5 @@
 package com.example.solartime
 
-import android.location.Location
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
@@ -10,19 +9,6 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 class Utils {
-    fun localSolarTime(longitude : Location){
-
-        val localStandardTime = Calendar.getInstance() // find today date and hour
-
-        var dayOfYear:Int  = localStandardTime.get(Calendar.DAY_OF_YEAR) // get number of the year
-
-        //val solarTime =  localStandardTime  + 4 minutes * (longitude - heure locale méridienne) + EquationDuTemps
-
-        val format = SimpleDateFormat("HH:mm:ss", Locale.FRENCH)
-
-
-    }
-
     companion object{ // like static in java
         fun correctLongitudeToLocalStandardTime(longitude: Double): Int {
 
@@ -62,7 +48,6 @@ class Utils {
             else
                 (resultMinutes * 60 *1000) - (resultSeconds * 1000)
         }
-
 
         fun round(value: Double, places: Int): Double {
             require(places >= 0)

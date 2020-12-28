@@ -5,8 +5,8 @@ App development in progress
 
 ## Tech stack
 
-• Kotlin
-• Coroutines
-• Lottie
-• Easy Permission
+* Kotlin
+* Coroutines
+* Lottie
+* Easy Permission
 

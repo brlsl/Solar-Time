@@ -18,13 +18,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"> <!--singleTop: prevent multiple opening of activity-->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <!-- receiver for clock widget -->
+        <receiver android:name=".MainActivityClockWidget"
+            android:label="@string/clock_widget">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="com.example.solartime.MainActivityClockWidget.CLOCK_WIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/clock_widget_info"/>
+        </receiver>
+        
+      <!-- <service android:name=".MainActivityClockWidget$UpdateService" /> -->
     </application>
 
 </manifest>

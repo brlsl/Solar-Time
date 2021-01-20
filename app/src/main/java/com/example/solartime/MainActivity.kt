@@ -31,15 +31,19 @@ import java.util.*
 class MainActivity : AppCompatActivity(){
 
     // FOR UI
-    private lateinit var mLegalTimeTxtView: TextView
-    private lateinit var mSolarTimeTxtView: TextView
-    private lateinit var mPositionTxtView: TextView
+    private lateinit var mLegalTimeTextView: TextView
+    private lateinit var mSolarTimeHourTextView: TextView
+    private lateinit var mPositionTitleTextView: TextView
+    private lateinit var mSolarTimeTitle: TextView
+    private lateinit var mTimeDifference: TextView
+    private lateinit var mTimeDifferenceTitle: TextView
     private lateinit var mLocalisationButton: Button
-    private lateinit var mapLocationAnim: LottieAnimationView
+    private lateinit var mMapLocationAnim: LottieAnimationView
+    private lateinit var mSunAnim: LottieAnimationView
 
     // FOR DATA
     private val TAG = "Main Activity"
-    private companion object val PREFERENCES = "PREFERENCES"
+    private val PREFERENCES = "PREFERENCES"
     private val PREFS_LONGITUDE = "PREFERENCES_LONGITUDE"
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var mConstraintLayout: ConstraintLayout
@@ -47,16 +51,20 @@ class MainActivity : AppCompatActivity(){
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
 
-
     // LIFE CYCLE
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        Utils.updateWidgetView(this)
+
         configureViews()
         configureCallBackLocation()
-        configureLegalTime(mLegalTimeTxtView)
-        askGPSPermission(mLegalTimeTxtView, mSolarTimeTxtView)
+        configureLegalTime(mLegalTimeTextView)
+        askGPSPermission(mLegalTimeTextView, mSolarTimeHourTextView)
+
+        configureLastKnownPosition()
+        configureTextTitles()
 
         mLocalisationButton.setOnClickListener {
             val lm: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -75,53 +83,61 @@ class MainActivity : AppCompatActivity(){
                 startLocationUpdates()
                 Snackbar.make(mConstraintLayout,"Refreshing position", Snackbar.LENGTH_LONG).show()
                 mLocalisationButton.visibility = View.GONE
-                mapLocationAnim.visibility = View.VISIBLE
-                mapLocationAnim.playAnimation()
-                mSolarTimeTxtView.visibility = View.GONE
+                mMapLocationAnim.visibility = View.VISIBLE
+                mMapLocationAnim.playAnimation()
+                mSolarTimeTitle.visibility = View.GONE
+                mSolarTimeHourTextView.visibility = View.GONE
+                mTimeDifference.visibility = View.GONE
+                mTimeDifferenceTitle.visibility = View.GONE
+                mSunAnim.pauseAnimation()
+                mSunAnim.visibility = View.GONE
 
+
+                val context = this
                 GlobalScope.launch(Dispatchers.Main) {
-                    delay(3000)
-                    stopLocationUpdates()
-                    mapLocationAnim.visibility = View.GONE
+                    delay(6000)
 
+                    configureTextTitles()
+
+                    configureLastKnownPosition()
+
+                    Utils.updateWidgetView(context)
+
+                    stopLocationUpdates()
+
+                    mMapLocationAnim.cancelAnimation()
+                    mMapLocationAnim.visibility = View.GONE
                     mLocalisationButton.visibility = View.VISIBLE
-                    mSolarTimeTxtView.visibility = View.VISIBLE
-                    val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999f)
-                    if (longitude != 999f)
-                        configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
+                    mSolarTimeTitle.visibility = View.VISIBLE
+                    mSolarTimeHourTextView.visibility = View.VISIBLE
+                    mTimeDifference.visibility = View.VISIBLE
+                    mTimeDifferenceTitle.visibility = View.VISIBLE
+                    mSunAnim.resumeAnimation()
+                    mSunAnim.visibility = View.VISIBLE
+
                 }
             }
         }
+    }
 
-
-
+    private fun configureLastKnownPosition() {
         if (mSharedPreferences.contains(PREFS_LONGITUDE)){
             val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999.0f)
             if (longitude != 999f){
-                mPositionTxtView.text = "Last known device longitude:" + Utils.round(longitude.toDouble(), 8)
-                configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
+                mPositionTitleTextView.text = "Last known device longitude:" + Utils.round(longitude.toDouble(), 8)
+                configureSolarTime(mSolarTimeHourTextView, longitude.toDouble())
+                mTimeDifference.text = Utils.calculateCurrentTimeDifference(longitude.toDouble())
             }
 
         } else {
-            mPositionTxtView.text = "Unknown location, please locate your device"
-        }
-
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999.0f)
-
-        if (longitude != 999f){
-            mPositionTxtView.text = "Last known device longitude:" + Utils.round(longitude.toDouble(), 8)
-            configureSolarTime(mSolarTimeTxtView, longitude.toDouble())
-        }
-        else {
-            mPositionTxtView.text = "Unknown location, please locate your device"
+            mPositionTitleTextView.text = "Unknown location, please locate your device"
         }
     }
 
-
+    override fun onDestroy() {
+        super.onDestroy()
+        Utils.updateWidgetView(this)
+    }
 
     // ask permissions
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray
@@ -139,8 +155,8 @@ class MainActivity : AppCompatActivity(){
                     // Got last known location. In some rare situations this can be null.
                     if (location != null){
                         var longitude = location.longitude
-                        mPositionTxtView.text = "Last known device longitude: ${Utils.round(longitude,8)}"
-                        configureSolarTime(solarTimeTxtView, longitude)
+                       // mPositionTxtView.text = "Last known device longitude: ${Utils.round(longitude,8)}"
+                        //configureSolarTime(solarTimeTxtView, longitude)
 
                         // register last known longitude
                         mSharedPreferences
@@ -169,8 +185,8 @@ class MainActivity : AppCompatActivity(){
                         .putFloat(PREFS_LONGITUDE, location.longitude.toFloat())
                         .apply()
 
-                    mPositionTxtView.text = "Last known device longitude: ${Utils.round(location.longitude,8)}"
-                    configureSolarTime(mSolarTimeTxtView, location.longitude)
+                    //mPositionTxtView.text = "Last known device longitude: ${Utils.round(location.longitude,8)}"
+                    //configureSolarTime(mSolarTimeTxtView, location.longitude)
                 }
             }
         }
@@ -178,13 +194,7 @@ class MainActivity : AppCompatActivity(){
     }
 
     private fun configureSolarTime(solarTimeTextView: TextView, longitude:Double){
-        val formatter = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
-        val calendar = Calendar.getInstance() // find today date and hour
-        val dayOfYear  = calendar.get(Calendar.DAY_OF_YEAR).toDouble() // get number day of the year
-
-        val currentSolarTime = Date().time.plus(Utils.correctLongitudeToLocalStandardTime(longitude) + Utils.equationOfTime(dayOfYear))
-
-        solarTimeTextView.text = formatter.format(currentSolarTime)
+        solarTimeTextView.text = Utils.calculateCurrentSolarTime(longitude)
 
         val handler = Handler(Looper.myLooper()!!)
         val job = GlobalScope.launch (Dispatchers.IO){
@@ -195,10 +205,9 @@ class MainActivity : AppCompatActivity(){
             }
         }
 
-        if (longitude == mSharedPreferences.getFloat(PREFS_LONGITUDE, 0.0f).toDouble()){
+        if (longitude == mSharedPreferences.getFloat(PREFS_LONGITUDE, 999.0f).toDouble()){
             job.start()
         }
-
 
         else {
             job.cancel()
@@ -224,12 +233,32 @@ class MainActivity : AppCompatActivity(){
         mSharedPreferences = baseContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         mConstraintLayout = findViewById(R.id.mainActivityConstraintLayout)
-        mLegalTimeTxtView = findViewById(R.id.hourTextView)
-        mSolarTimeTxtView = findViewById(R.id.solarTimeHourTextView)
-        mPositionTxtView = findViewById(R.id.longitudeTextView)
+        mLegalTimeTextView = findViewById(R.id.legal_time_textView)
+        mSolarTimeHourTextView = findViewById(R.id.solar_time_hour_textView)
+        mPositionTitleTextView = findViewById(R.id.longitude_textView)
+        mSolarTimeTitle = findViewById(R.id.solar_time_title_textView)
+        mTimeDifferenceTitle = findViewById(R.id.time_difference_title_textView)
+        mTimeDifference = findViewById(R.id.time_difference_hour_textView)
         mLocalisationButton = findViewById(R.id.button_localisation)
-        mapLocationAnim = findViewById(R.id.map_location_anim)
+        mMapLocationAnim = findViewById(R.id.map_location_anim)
+        mSunAnim = findViewById(R.id.sun_anim)
     }
+
+
+    private fun configureTextTitles(): CharSequence {
+        val longitude = mSharedPreferences.getFloat(PREFS_LONGITUDE, 999f)
+        if (longitude == 999f){
+            mSolarTimeTitle.text = "Locate your device"
+            mTimeDifferenceTitle.text = ""
+        }
+        else {
+            mSolarTimeTitle.text = "Current Solar Time:"
+            mTimeDifferenceTitle.text = "Time difference:"
+        }
+        return mSolarTimeTitle.text
+    }
+
+
 
     // LOCATION METHODS
 

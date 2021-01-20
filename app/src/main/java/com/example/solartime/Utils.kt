@@ -1,5 +1,11 @@
 package com.example.solartime
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.widget.RemoteViews
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.SimpleDateFormat
@@ -54,6 +60,61 @@ class Utils {
             var bd: BigDecimal = BigDecimal.valueOf(value)
             bd = bd.setScale(places, RoundingMode.HALF_UP)
             return bd.toDouble()
+        }
+
+        fun calculateCurrentSolarTime(longitude: Double): String? {
+            val formatter = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
+            val calendar = Calendar.getInstance() // find today date and hour
+            val dayOfYear  = calendar.get(Calendar.DAY_OF_YEAR).toDouble() // get number day of the year
+
+            return  formatter.format(Date().time.plus(correctLongitudeToLocalStandardTime(longitude) + equationOfTime(dayOfYear)))
+
+        }
+
+        fun calculateCurrentTimeDifference(longitude: Double): String{
+            val formatter = SimpleDateFormat("HH:mm:ss", Locale.CHINA)
+            formatter.timeZone = TimeZone.getTimeZone("GMT")
+            val calendar = Calendar.getInstance() // find today date and hour
+            val dayOfYear  = calendar.get(Calendar.DAY_OF_YEAR).toDouble() // get number day of the year
+
+            var timeDifference = correctLongitudeToLocalStandardTime(longitude) + equationOfTime(dayOfYear)
+
+            return if (timeDifference < 0){
+                timeDifference *= -1
+                "-"+formatter.format(timeDifference)
+            }else
+                "+"+formatter.format(timeDifference)
+
+        }
+
+        fun updateWidgetView(context: Context){
+            val updateViews = buildUpdate(context)
+            val widget = ComponentName(context, MainActivityClockWidget::class.java)
+            val manager = AppWidgetManager.getInstance(context)
+
+            manager.updateAppWidget(widget, updateViews)
+
+        }
+        private fun buildUpdate(context: Context?): RemoteViews {
+            // build view for clock widget
+            val updateViews = RemoteViews(context?.packageName, R.layout.clock_widget)
+
+            // clock data
+            val preferences = context?.getSharedPreferences("PREFERENCES", Context.MODE_PRIVATE)
+            val longitude = preferences!!.getFloat("PREFERENCES_LONGITUDE", 999.0f)
+
+            if (longitude != 999.0f){
+                val time = calculateCurrentTimeDifference(longitude.toDouble())
+                updateViews.setTextViewText(R.id.widgetTextViewHour, time)
+                updateViews.setTextViewCompoundDrawables(R.id.widgetTextViewHour, 0,0,0,0)
+                updateViews.setTextViewText(R.id.widgetTextViewTitle, "Time difference:")
+            } else{
+                updateViews.setTextViewText(R.id.widgetTextViewHour, "Locate the device")
+                updateViews.setTextViewCompoundDrawables(R.id.widgetTextViewHour, 0,R.drawable.ic_gps,0,0)
+            }
+
+            return updateViews
+
         }
 
     }

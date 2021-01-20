@@ -5,91 +5,123 @@
     android:id="@+id/mainActivityConstraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:background="@drawable/gradient_background">
 
     <TextView
-        android:id="@+id/hourTextView"
+        android:id="@+id/longitude_textView"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text=""
-        android:textSize="50sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/currentLegalTime_textView" />
-
-    <TextView
-        android:id="@+id/longitudeTextView"
-        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:text="Click on button below"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
-
     </TextView>
 
     <TextView
-        android:id="@+id/solarTimeHourTextView"
+        android:id="@+id/legal_time_title_textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="50sp"
+        android:layout_marginTop="16dp"
+        android:text="Current legal time:"
         android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/longitude_textView" />
+
+
+    <TextView
+        android:id="@+id/legal_time_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text=""
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.501"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/legal_time_title_textView" />
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/sun_anim"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_localisation" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_rawRes="@raw/sunset_animation" />
 
-    <Button
-        android:id="@+id/button_localisation"
+    <TextView
+        android:id="@+id/solar_time_title_textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@null"
-        android:drawableTop="@drawable/ic_gps"
-        android:text="Locate your device"
+        android:layout_marginBottom="4dp"
+        android:text="Current solar time:"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/solar_time_hour_textView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <TextView
+        android:id="@+id/solar_time_hour_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="40sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/time_difference_title_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@+id/solar_time_hour_textView"
+        app:layout_constraintStart_toStartOf="@+id/solar_time_hour_textView"
+        app:layout_constraintTop_toBottomOf="@+id/solar_time_hour_textView" />
+
+    <TextView
+        android:id="@+id/time_difference_hour_textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        app:layout_constraintEnd_toEndOf="@+id/solar_time_hour_textView"
+        app:layout_constraintHorizontal_bias="0.492"
+        app:layout_constraintStart_toStartOf="@+id/solar_time_hour_textView"
+        app:layout_constraintTop_toBottomOf="@+id/time_difference_title_textView" />
+
+    <Button
+        android:id="@+id/button_localisation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="48dp"
+        android:background="@null"
+        android:drawableTop="@drawable/ic_gps"
+        android:text="Locate your device"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/map_location_anim"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="@+id/button_localisation"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button_localisation"
-        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
         app:lottie_loop="true"
-        app:lottie_rawRes="@raw/map_location"/>
+        app:lottie_rawRes="@raw/map_location" />
 
-    <TextView
-        android:id="@+id/currentSolarTime_textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="8dp"
-        android:text="Current solar time:"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@+id/solarTimeHourTextView"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/currentLegalTime_textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:textStyle="bold"
-        android:text="Current legal time:"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/longitudeTextView" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
